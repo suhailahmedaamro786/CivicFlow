@@ -67,12 +67,13 @@ app.post('/api/orchestrate/stream', async (req, res) => {
       return res.status(400).json({ error: 'Missing citizen query' });
     }
 
-    // Configure SSE headers
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
+    // Configure SSE headers only after request validation.
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
 
     const sendEvent = (event: string, data: any) => {
       if (!res.writableEnded) {
@@ -85,10 +86,9 @@ app.post('/api/orchestrate/stream', async (req, res) => {
     }, 10000);
     req.on('close', () => clearInterval(heartbeat));
 
-    const initialState = orchestrator.createInitialState(query, language, location);
-    sendEvent('init', { state: initialState });
-
     try {
+      const initialState = orchestrator.createInitialState(query, language, location);
+      sendEvent('init', { state: initialState });
       const finalState = await orchestrator.executePipeline(initialState, (agentId, status, record, state) => {
         sendEvent('agent_step', {
           agentId,
@@ -236,11 +236,8 @@ interface AgentFeedbackRecord {
   timestamp: string;
 }
 
-const feedbackStore: AgentFeedbackRecord[] = [
-  { agentId: 'rag_agent', rating: 'up', reason: 'Authoritative statutory citation verified', timestamp: new Date(Date.now() - 3600000).toISOString() },
-  { agentId: 'verifier_agent', rating: 'up', reason: 'Zero-cost EIN validation confirmed', timestamp: new Date(Date.now() - 1800000).toISOString() },
-  { agentId: 'workflow_agent', rating: 'up', reason: 'Consequential action gated accurately', timestamp: new Date(Date.now() - 900000).toISOString() }
-];
+const feedbackStore: AgentFeedbackRecord[] = [];
+
 
 app.get('/api/rag/feedback', (req, res) => {
   const summary: Record<string, { upvotes: number; downvotes: number; calibrationFactor: number }> = {};

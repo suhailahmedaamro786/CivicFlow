@@ -1,0 +1,128 @@
+import React, { useState, useEffect } from 'react';
+import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { LandingPage } from './pages/LandingPage';
+import { DashboardCommandCenter } from './pages/DashboardCommandCenter';
+import { NewRequestPage } from './pages/NewRequestPage';
+import { RequestHistoryPage } from './pages/RequestHistoryPage';
+import { RequestDetailPage } from './pages/RequestDetailPage';
+import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
+import { AgentMonitoringPage } from './pages/AgentMonitoringPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { JudgeDemoPage } from './pages/JudgeDemoPage';
+import { INITIAL_DEMO_REQUEST } from './services/storageService';
+
+export default function App() {
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return window.location.pathname === '/' ? '/' : window.location.pathname;
+  });
+
+  // Keep state in sync with browser navigation (back/forward buttons)
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setCurrentPath(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLaunchDemo = () => {
+    navigateTo('/demo');
+  };
+
+  // Route matching
+  const renderCurrentView = () => {
+    // Check if on Landing
+    if (currentPath === '/' || currentPath === '') {
+      return (
+        <LandingPage
+          onNavigate={navigateTo}
+          onLaunchDemo={handleLaunchDemo}
+        />
+      );
+    }
+
+    // Dedicated Judge Demo route
+    if (currentPath === '/demo') {
+      return <JudgeDemoPage onNavigate={navigateTo} />;
+    }
+
+    // Detail view: /dashboard/requests/[id]
+    if (currentPath.startsWith('/dashboard/requests/')) {
+      const id = currentPath.replace('/dashboard/requests/', '');
+      return (
+        <RequestDetailPage
+          requestId={id}
+          onNavigate={navigateTo}
+        />
+      );
+    }
+
+    if (currentPath === '/dashboard/new-request') {
+      return <NewRequestPage onNavigate={navigateTo} />;
+    }
+
+    if (currentPath === '/dashboard/requests') {
+      return <RequestHistoryPage onNavigate={navigateTo} />;
+    }
+
+    if (currentPath === '/dashboard/knowledge') {
+      return <KnowledgeBasePage />;
+    }
+
+    if (currentPath === '/dashboard/agents') {
+      return <AgentMonitoringPage />;
+    }
+
+    if (currentPath === '/dashboard/analytics') {
+      return <AnalyticsPage />;
+    }
+
+    // Default to command center for /dashboard and unrecognized routes
+    return (
+      <DashboardCommandCenter
+        onNavigate={navigateTo}
+        onLaunchDemo={handleLaunchDemo}
+      />
+    );
+  };
+
+  const isLanding = currentPath === '/' || currentPath === '' || currentPath === '/demo';
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900">
+      
+      {/* Top Navbar */}
+      <Navbar
+        currentPath={currentPath}
+        onNavigate={navigateTo}
+        onLaunchDemo={handleLaunchDemo}
+      />
+
+      {/* Main Container */}
+      <div className="flex-1 flex">
+        {/* Render Sidebar only on Dashboard routes */}
+        {!isLanding && (
+          <Sidebar
+            currentPath={currentPath}
+            onNavigate={navigateTo}
+          />
+        )}
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-x-hidden min-h-[calc(100vh-4rem)]">
+          {renderCurrentView()}
+        </main>
+      </div>
+
+    </div>
+  );
+}

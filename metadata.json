@@ -1,0 +1,7 @@
+{
+  "name": "CivicFlow AI",
+  "description": "From Citizen Problems to Verified Action Plans. An AI-powered citizen service workflow platform featuring multi-agent orchestration, RAG knowledge grounding, and human-in-the-loop verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

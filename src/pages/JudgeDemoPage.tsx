@@ -156,7 +156,9 @@ export const JudgeDemoPage: React.FC<{ onNavigate: (path: string) => void }> = (
       }
     } catch (err) {
       console.error('Demo error:', err);
-      setStatusMessage('');
+      const message = err instanceof Error ? err.message : 'The multi-agent workflow failed.';
+      setStatusMessage(`Workflow stopped: ${message}`);
+      setExecutions((current) => [...current]);
     } finally {
       setIsExecuting(false);
       setCurrentRunningAgent(undefined);

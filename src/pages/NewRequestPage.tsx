@@ -55,15 +55,10 @@ export const NewRequestPage: React.FC<{ onNavigate: (path: string) => void }> = 
     } catch {
       // Ignore storage cleanup failures.
     }
-    setIsSubmitting(true);
-    try {
-      await agentOrchestrator.runWorkflow(request, targetLanguage);
-    } catch (error) {
-      console.error('CivicFlow request failed:', error);
-    } finally {
-      setIsSubmitting(false);
-      onNavigate(`/dashboard/requests/${id}`);
-    }
+    setIsSubmitting(false);
+    // Navigate immediately. The request detail screen owns the live workflow,
+    // so progress and failures remain visible instead of leaving this form mounted.
+    onNavigate(`/dashboard/requests/${id}`);
   };
 
   return (

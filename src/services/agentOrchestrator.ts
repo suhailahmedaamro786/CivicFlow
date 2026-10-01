@@ -201,77 +201,63 @@ class AgentOrchestrator {
   public transformStateToActionPlan(requestId: string, state: WorkflowState): FinalActionPlan {
     const response = state.finalResponse;
     const verifier = state.verificationResult;
-
-    // Steps
     const steps = (state.workflowSteps || []).map((step, idx) => ({
-      id: `step-${step.stepNumber}`,
-      order: step.stepNumber,
-      phase: (step.stepNumber <= 2 ? 'Phase 1: Legal Formation' : step.stepNumber === 3 ? 'Phase 2: Tax & Identifiers' : 'Phase 3: Municipal Licensing') as any,
+      id: `step-${step.stepNumber || idx + 1}`,
+      order: step.stepNumber || idx + 1,
+      phase: 'General' as const,
       title: step.title,
       description: step.description,
       responsibleAgency: step.responsibleParty,
-      estimatedDuration: step.estimatedEffort,
-      estimatedFee: step.stepNumber === 1 ? 70.00 : step.stepNumber === 3 ? 26.00 : step.stepNumber === 4 ? 50.00 : 0.00,
-      feeCurrency: 'USD',
+      estimatedDuration: step.estimatedEffort || 'REQUIRES_VERIFICATION',
+      estimatedFee: 0,
+      feeCurrency: '',
       actionType: 'form_submission' as const,
-      requiredDocuments: step.requiredDocuments,
-      officialPortalUrl: 'https://portal.gov/services',
+      requiredDocuments: step.requiredDocuments || [],
+      officialPortalUrl: undefined,
       requiresHumanApproval: step.isConsequentialAction,
       isConsequentialAction: step.isConsequentialAction,
       completed: false
     }));
 
-    // Document checklist
     const checklist = (state.requiredDocuments || []).map(doc => ({
       name: doc.name,
       isMandatory: doc.required,
-      templateAvailable: true,
-      notes: `${doc.purpose} (${doc.notes})`
+      templateAvailable: false,
+      notes: doc.notes || doc.purpose
     }));
+
+    const supported = verifier?.verifiedClaims || [];
+    const unsupported = verifier?.unsupportedClaims || [];
+    const warnings = [
+      ...(verifier?.warnings || []),
+      ...(response?.importantWarnings || []),
+      ...(response?.missingInformationWarning || [])
+    ];
 
     return {
       id: `plan-${requestId}`,
       generatedAt: new Date().toISOString(),
-      executiveSummary: response?.understandingOfRequest || 'Action plan formulated based on verified municipal codes.',
-      jurisdictionContext: state.normalizedRequest ? `${state.normalizedRequest.location.city}, ${state.normalizedRequest.location.state}` : 'Municipal & State Jurisdiction',
-      estimatedTotalTime: '10 to 14 business days',
-      estimatedTotalFees: steps.reduce((sum, s) => sum + s.estimatedFee, 0),
-      criticalAlerts: response?.importantWarnings || [
-        'Do NOT pay third-party services for an EIN: The IRS provides this identification number 100% free of charge online.',
-        'Consequential Action: Submitting Articles of Organization incurs a non-refundable $70.00 filing fee.'
-      ],
+      executiveSummary: response?.understandingOfRequest || 'CivicFlow could not generate a final summary from the live model.',
+      jurisdictionContext: state.normalizedRequest
+        ? [state.normalizedRequest.location.city, state.normalizedRequest.location.state, state.normalizedRequest.location.country].filter(Boolean).join(', ')
+        : 'Jurisdiction not resolved',
+      estimatedTotalTime: steps.length ? (steps.every(s => s.estimatedDuration === 'REQUIRES_VERIFICATION') ? 'REQUIRES_VERIFICATION' : 'See individual verified steps') : 'REQUIRES_VERIFICATION',
+      estimatedTotalFees: 0,
+      criticalAlerts: warnings,
       steps,
-      requiredDocumentChecklist: checklist.length > 0 ? checklist : [
-        { name: 'Articles of Organization (Form LLC-1)', isMandatory: true, templateAvailable: true, notes: 'Designate registered agent' },
-        { name: 'IRS EIN Confirmation Letter', isMandatory: true, templateAvailable: true, notes: 'Required for commercial banking' }
-      ],
-      officialContacts: [
-        {
-          agency: 'Secretary of State (Business Programs)',
-          phone: '(916) 653-3795',
-          email: 'bizfile@sos.state.gov',
-          address: '1500 11th Street, State Capital',
-          portalUrl: 'https://bizfileonline.sos.ca.gov'
-        },
-        {
-          agency: 'City Office of Finance',
-          phone: '(213) 473-5901',
-          email: 'finance.customerservice@citygov.org',
-          address: '200 N. Spring Street, City Hall',
-          portalUrl: 'https://finance.citygov.org'
-        }
-      ],
+      requiredDocumentChecklist: checklist,
+      officialContacts: [],
       verificationResult: {
         verified: verifier?.verificationStatus === 'VERIFIED',
-        overallConfidence: verifier?.overallConfidence || 0.98,
-        hallucinationRisk: 'low',
-        claimsCheckedCount: (verifier?.verifiedClaims.length || 4) + (verifier?.unsupportedClaims.length || 0),
-        unverifiedClaims: verifier?.unsupportedClaims || [],
-        complianceNotes: verifier?.verifiedClaims || ['Statutory filing fees cross-referenced against official codes.'],
-        disclaimer: response?.legalAdvisoryNotice || 'All statutory citations have been cross-referenced against authoritative state & municipal gazettes.',
+        overallConfidence: verifier?.overallConfidence || 0,
+        hallucinationRisk: verifier && verifier.unsupportedClaims.length === 0 ? 'low' : 'high',
+        claimsCheckedCount: supported.length + unsupported.length + (verifier?.auditedClaims?.length || 0),
+        unverifiedClaims: unsupported,
+        complianceNotes: supported,
+        disclaimer: response?.legalAdvisoryNotice || 'Verify important requirements directly with the relevant authority before taking consequential action.',
         verifiedAt: new Date().toISOString()
       },
-      legalDisclaimer: response?.legalAdvisoryNotice || 'CivicFlow provides informational guidance, not legal or government decisions. Verify important requirements with the relevant authority before submitting documents, making payments, or taking consequential action.'
+      legalDisclaimer: response?.legalAdvisoryNotice || 'CivicFlow provides informational guidance, not government decisions. Verify requirements with the relevant authority before submitting documents or making payments.'
     };
   }
 

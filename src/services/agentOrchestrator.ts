@@ -46,6 +46,7 @@ class AgentOrchestrator {
           signal: controller.signal
         });
       } catch (error) {
+        window.clearTimeout(clientTimeout);
         if (error instanceof DOMException && error.name === 'AbortError') {
           throw new Error('The live workflow timed out after 2 minutes. Check Gemini API availability and try again.');
         }

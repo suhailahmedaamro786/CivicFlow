@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onLaunc
         </div>
 
         {/* Primary Navigation Links */}
-        <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <button
             onClick={() => go('/dashboard')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${

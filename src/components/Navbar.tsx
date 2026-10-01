@@ -4,7 +4,6 @@ import {
   Building2, 
   Sparkles, 
   PlusCircle, 
-  Play, 
   ShieldCheck, 
   ExternalLink,
   Cpu,
@@ -89,19 +88,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onLaunc
           </button>
 
           <button
-            onClick={() => go('/demo')}
+            onClick={() => go('/dashboard/new-request')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              currentPath === '/demo'
+              currentPath === '/dashboard/new-request'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
+                : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200'
             }`}
-            title="Open Judge Multi-Agent Live Execution Dashboard"
           >
-            <Play className="w-3 h-3 fill-current" />
-            <span>Demo</span>
-            <span className={`text-[9px] px-1 py-0.2 rounded font-extrabold uppercase ${
-              currentPath === '/demo' ? 'bg-blue-700 text-white' : 'bg-indigo-200/60 text-indigo-900'
-            }`}>Judge</span>
+            <PlusCircle className="w-3 h-3" />
+            <span>New Request</span>
           </button>
         </div>
 
@@ -117,11 +112,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onLaunc
             <motion.div className="absolute left-0 right-0 top-16 z-50 border-b border-slate-200 bg-white px-4 py-4 shadow-xl lg:hidden" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.18, ease: 'easeOut' }}>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
-                  ['/dashboard', 'Dashboard'], ['/dashboard/requests', 'Requests'], ['/dashboard/knowledge', 'Knowledge'], ['/demo', 'Judge Demo'], ['/dashboard/agents', 'Agent Monitoring'], ['/dashboard/analytics', 'System Telemetry'],
+                  ['/dashboard', 'Dashboard'], ['/dashboard/new-request', 'New Request'], ['/dashboard/requests', 'Requests'], ['/dashboard/knowledge', 'Knowledge'], ['/dashboard/agents', 'Agent Monitoring'], ['/dashboard/analytics', 'System Telemetry'],
                 ].map(([path, label]) => (
                   <button key={path} onClick={() => go(path)} className={`flex min-h-11 items-center justify-between rounded-xl px-4 text-left text-sm font-semibold transition-colors ${currentPath === path ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                     <span>{label}</span>
-                    {path === '/demo' && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Judge</span>}
+
                   </button>
                 ))}
               </div>

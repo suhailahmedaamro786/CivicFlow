@@ -43,31 +43,7 @@ export const CleanActionPlanView: React.FC<CleanActionPlanViewProps> = ({
   const claimsChecked = vr.claimsCheckedCount || (unverifiedCount > 0 ? unverifiedCount + 4 : 5);
   const claimsSupported = Math.max(0, claimsChecked - unverifiedCount);
 
-  // Source list fallback to citations if available
-  const displaySources = citations.length > 0 ? citations : [
-    {
-      id: 'demo-src-1',
-      docId: 'doc-demo-1',
-      title: 'State Limited Liability Company Act — Formation Provisions',
-      section: 'Section 17702.01',
-      authority: 'Secretary of State, Division of Corporations',
-      exactQuote: 'Articles of organization must be delivered on the designated filing form with the requisite filing fee.',
-      relevanceScore: 0.95,
-      isOfficialCode: true,
-      lastVerifiedDate: '2026-01-15'
-    },
-    {
-      id: 'demo-src-2',
-      docId: 'doc-demo-2',
-      title: 'Municipal Business Tax & Regulatory Licensing Ordinance',
-      section: 'Section 21.03',
-      authority: 'Office of Finance & Local Revenue',
-      exactQuote: 'Every person transacting business shall obtain a tax certificate within thirty days of commencing trade.',
-      relevanceScore: 0.92,
-      isOfficialCode: true,
-      lastVerifiedDate: '2026-01-15'
-    }
-  ];
+  const displaySources = citations;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-8 p-6 sm:p-8">
@@ -76,8 +52,8 @@ export const CleanActionPlanView: React.FC<CleanActionPlanViewProps> = ({
       <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200">
         <div className="space-y-1 max-w-2xl">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-              Verified Action Plan
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${vr.verified ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+              {vr.verified ? 'Evidence verified' : 'Verification requires review'}
             </span>
             <span className="text-xs text-slate-500 font-medium">
               {plan.jurisdictionContext}
@@ -176,13 +152,13 @@ export const CleanActionPlanView: React.FC<CleanActionPlanViewProps> = ({
           <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1">
             <span className="font-bold text-slate-900 block">Eligibility & Thresholds</span>
             <p className="text-slate-600 leading-relaxed">
-              Standard commercial formation criteria: designated physical in-state registered address, principal identification, and clean entity name clearance.
+              {vr.complianceNotes?.length ? vr.complianceNotes.join(' ') : 'No additional eligibility findings were produced by the live verification pass.'}
             </p>
           </div>
           <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1">
             <span className="font-bold text-slate-900 block">Administrative Fees</span>
             <p className="text-slate-600 leading-relaxed">
-              Statutory fees are assessed at each individual official agency filing step. Confirm exact fee amounts directly with the agency clerk before payment.
+              CivicFlow does not invent fee amounts. Individual steps show only timing and source information returned by the live workflow; confirm any fee directly with the cited authority.
             </p>
           </div>
         </div>

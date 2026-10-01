@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Play, 
   RotateCw, 
@@ -24,7 +24,7 @@ import { PrintableActionPacket } from '../components/PrintableActionPacket';
 import { LegalDisclaimer } from '../components/LegalDisclaimer';
 import { agentOrchestrator } from '../services/agentOrchestrator';
 import { LiveExecutionPanel } from '../components/LiveExecutionPanel';
-import { CIVICFLOW_STAGES, ExecutionStage, playExecutionTone } from '../services/liveExecutionService';
+import { CIVICFLOW_STAGES, ExecutionStage } from '../services/liveExecutionService';
 
 interface DemoScenario {
   id: string;
@@ -143,8 +143,6 @@ export const JudgeDemoPage: React.FC<{ onNavigate: (path: string) => void }> = (
     try {
       const completed = await agentOrchestrator.runWorkflow(tempReq, 'en', (agentId, status, exec, all) => {
         setCurrentRunningAgent(status === 'running' ? agentId : undefined);
-        if (status === 'success') playExecutionTone('success');
-        if (status === 'warning') playExecutionTone('warning');
         setStatusMessage(`Worker active: ${agentId.replace('_', ' ')}...`);
         if (all) setExecutions([...all]);
       });

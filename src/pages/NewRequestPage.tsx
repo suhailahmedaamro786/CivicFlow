@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Building2, Clock, Languages, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Clock, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
 import { UserRequest } from '../types';
 import { SupportedLanguage } from '../types/agentEngine';
 import { storageService } from '../services/storageService';
@@ -8,7 +8,16 @@ import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 export const NewRequestPage: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
   const [title, setTitle] = useState('');
-  const [rawQuery, setRawQuery] = useState('');
+  const [rawQuery, setRawQuery] = useState(() => {
+    try {
+      const draft = localStorage.getItem('civicflow_request_draft');
+      if (!draft) return '';
+      const parsed = JSON.parse(draft);
+      return typeof parsed?.rawQuery === 'string' ? parsed.rawQuery : '';
+    } catch {
+      return '';
+    }
+  });
   const [city, setCity] = useState('');
   const [county, setCounty] = useState('');
   const [state, setState] = useState('');
@@ -41,6 +50,11 @@ export const NewRequestPage: React.FC<{ onNavigate: (path: string) => void }> = 
     };
 
     storageService.saveRequest(request);
+    try {
+      localStorage.removeItem('civicflow_request_draft');
+    } catch {
+      // Ignore storage cleanup failures.
+    }
     setIsSubmitting(true);
     try {
       await agentOrchestrator.runWorkflow(request, targetLanguage);
@@ -57,7 +71,7 @@ export const NewRequestPage: React.FC<{ onNavigate: (path: string) => void }> = 
       <section>
         <span className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">New request</span>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Tell CivicFlow what you need</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">Start with your real problem and jurisdiction. CivicFlow decides which workers are needed and only uses evidence available to the live knowledge base.</p>
+        <p className="mt-2 max-w-2xl text-sm text-slate-600">Start with your real problem and jurisdiction. CivicFlow selects the workers it needs and only uses evidence available to the configured knowledge base.</p>
       </section>
 
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-7">

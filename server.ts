@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.env.NODE_ENV === 'production';
+const isVercel = process.env.VERCEL === '1';
 
 // Multer in-memory storage for safe file validation & buffer extraction
 const upload = multer({
@@ -364,6 +365,8 @@ Perform your agent evaluation and output a JSON response matching:
   }
 });
 
+export { app };
+
 async function startServer() {
   if (!isProd) {
     // Vite middleware for development
@@ -390,6 +393,8 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start CivicFlow server:', err);
-});
+if (!isVercel) {
+  startServer().catch(err => {
+    console.error('Failed to start CivicFlow server:', err);
+  });
+}

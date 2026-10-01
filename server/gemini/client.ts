@@ -78,21 +78,10 @@ export class GeminiService {
 
     // Check if client is available or in temporary quota cool-down
     if (!this.isConfigured() || !this.client || Date.now() < this.quotaExhaustedUntil) {
-      if (params.fallbackGenerator) {
-        const reason = Date.now() < this.quotaExhaustedUntil
-          ? 'Gemini API temporary rate-limit / quota cool-down active: executing verified domain engine fallback.'
-          : 'GEMINI_API_KEY not configured: executing verified domain engine fallback.';
-        warnings.push(reason);
-        const fallbackData = params.fallbackGenerator();
-        return {
-          data: fallbackData,
-          latencyMs: Date.now() - startTime,
-          tokens: { prompt: 0, completion: 0, total: 0 },
-          isFromGemini: false,
-          warnings
-        };
-      }
-      throw new Error('GEMINI_API_KEY is not configured or in quota cooldown and no fallback generator was provided.');
+      const reason = Date.now() < this.quotaExhaustedUntil
+        ? 'Gemini quota is temporarily unavailable.'
+        : 'GEMINI_API_KEY is not configured.';
+      throw new Error(reason + ' CivicFlow will not substitute demo or fabricated civic data.');
     }
 
     let lastError: any = null;
@@ -181,19 +170,6 @@ export class GeminiService {
           break;
         }
       }
-    }
-
-    // If Gemini failed after retries, invoke fallback generator if provided
-    if (params.fallbackGenerator) {
-      warnings.push(`Gemini service error (${lastError?.message || 'Unknown'}). Utilizing verified domain fallback.`);
-      const fallbackData = params.fallbackGenerator();
-      return {
-        data: fallbackData,
-        latencyMs: Date.now() - startTime,
-        tokens: { prompt: 0, completion: 0, total: 0 },
-        isFromGemini: false,
-        warnings
-      };
     }
 
     throw new Error(`Gemini API execution failed: ${lastError?.message || 'Unknown error'}`);

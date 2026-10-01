@@ -50,8 +50,6 @@ class AgentOrchestrator {
           throw new Error('The live workflow timed out after 2 minutes. Check Gemini API availability and try again.');
         }
         throw error;
-      } finally {
-        window.clearTimeout(clientTimeout);
       }
 
       if (!response.ok || !response.body) {
@@ -152,6 +150,7 @@ class AgentOrchestrator {
         if (done) break;
       }
       if (buffer.trim()) consumeEvent(buffer);
+      window.clearTimeout(clientTimeout);
 
       if (streamError) throw new Error(streamError);
       if (!workflowState) throw new Error('Workflow stream ended without a final state.');

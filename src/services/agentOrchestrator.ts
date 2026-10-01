@@ -184,9 +184,15 @@ class AgentOrchestrator {
       storageService.saveRequest(currentRequest);
       return currentRequest;
     } catch (err: any) {
-      console.warn('[client orchestrator] Pipeline error, utilizing local resilient execution:', err);
-      // Resilient fallback logic
-      return currentRequest;
+      console.error('[client orchestrator] Pipeline error:', err);
+      const message = err instanceof Error ? err.message : 'Multi-agent workflow failed.';
+      // Keep the failure visible to the caller instead of silently returning 0 completed agents.
+      currentRequest = {
+        ...currentRequest,
+        status: 'failed',
+        updatedAt: new Date().toISOString()
+      };
+      throw new Error(message);
     } finally {
       this.activeExecutions.delete(request.id);
     }

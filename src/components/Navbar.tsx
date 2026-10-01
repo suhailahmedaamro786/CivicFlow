@@ -4,9 +4,6 @@ import {
   Building2, 
   Sparkles, 
   PlusCircle, 
-  ShieldCheck, 
-  ExternalLink,
-  Cpu,
   Menu,
   X
 } from 'lucide-react';
@@ -14,10 +11,9 @@ import {
 interface NavbarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
-  onLaunchDemo?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onLaunchDemo }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const go = (path: string) => { setMobileOpen(false); onNavigate(path); };
 
@@ -46,15 +42,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onLaunc
           {/* System Engine Indicator */}
           <div className="hidden xl:flex items-center gap-2 pl-4 border-l border-slate-200 text-xs">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
             </span>
             <span className="font-medium text-slate-600 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              Dynamic AI Workers Active
+              Evidence + AI orchestration
             </span>
             <span className="text-slate-300">•</span>
-            <span className="text-slate-500 font-mono text-[11px]">Statutory RAG</span>
+            <span className="text-slate-500 font-mono text-[11px]">Evidence RAG</span>
           </div>
         </div>
 

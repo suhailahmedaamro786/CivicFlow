@@ -82,7 +82,12 @@ export class AgentOrchestrator {
       onProgress?.(agentId, 'running', pendingRecord, state);
 
       try {
-        const { output, summary, sources } = await fn();
+        // Never allow one external/model call to block the entire 9-agent workflow indefinitely.
+        const timeoutMs = 45000;
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Agent ${agentName} timed out after ${timeoutMs / 1000}s.`)), timeoutMs)
+        );
+        const { output, summary, sources } = await Promise.race([fn(), timeout]);
         const duration = Date.now() - startMs;
 
         const record: AgentExecutionRecord = {

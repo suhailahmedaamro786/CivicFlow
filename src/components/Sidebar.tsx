@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
   ];
 
   return (
-    <aside className="w-60 bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="hidden lg:flex w-60 bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col shrink-0 min-h-[calc(100vh-4rem)] sticky top-16 h-[calc(100vh-4rem)]">
       
       {/* Navigation menu */}
       <div className="p-4 space-y-6 flex-1">

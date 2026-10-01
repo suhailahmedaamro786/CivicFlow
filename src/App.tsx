@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { LandingPage } from './pages/LandingPage';
@@ -119,7 +120,11 @@ export default function App() {
 
         {/* Content Area */}
         <main className="flex-1 overflow-x-hidden min-h-[calc(100vh-4rem)]">
-          {renderCurrentView()}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={currentPath} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="min-h-full">
+              {renderCurrentView()}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

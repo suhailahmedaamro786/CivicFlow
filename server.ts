@@ -75,8 +75,15 @@ app.post('/api/orchestrate/stream', async (req, res) => {
     });
 
     const sendEvent = (event: string, data: any) => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (!res.writableEnded) {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      }
     };
+
+    const heartbeat = setInterval(() => {
+      sendEvent('heartbeat', { timestamp: new Date().toISOString() });
+    }, 10000);
+    req.on('close', () => clearInterval(heartbeat));
 
     const initialState = orchestrator.createInitialState(query, language, location);
     sendEvent('init', { state: initialState });
@@ -95,7 +102,8 @@ app.post('/api/orchestrate/stream', async (req, res) => {
     } catch (pipelineErr: any) {
       sendEvent('error', { error: pipelineErr?.message || 'Pipeline execution failed' });
     } finally {
-      res.end();
+      clearInterval(heartbeat);
+      if (!res.writableEnded) res.end();
     }
   } catch (err: any) {
     console.error('[server] SSE error:', err);

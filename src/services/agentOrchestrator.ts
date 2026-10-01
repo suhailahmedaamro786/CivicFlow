@@ -29,10 +29,10 @@ class AgentOrchestrator {
     const accumulatedExecutions: AgentExecution[] = [];
 
     try {
-      // Call server-side multi-agent pipeline endpoint
-      const response = await fetch('/api/orchestrate/run', {
+      // Use the real SSE pipeline so the UI receives each agent event as it happens.
+      const response = await fetch('/api/orchestrate/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
         body: JSON.stringify({
           query: request.rawQuery,
           language: targetLanguage,
@@ -40,16 +40,49 @@ class AgentOrchestrator {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`Server returned error status: ${response.status}`);
+      if (!response.ok || !response.body) {
+        throw new Error(`Workflow stream unavailable (HTTP ${response.status}).`);
       }
 
-      const payload = await response.json();
-      const workflowState: WorkflowState = payload.state;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let workflowState: WorkflowState | null = null;
+      let streamError: string | null = null;
 
-      // Transform agent executions from workflowState
-      if (workflowState.agentExecutions && Array.isArray(workflowState.agentExecutions)) {
-        for (const record of workflowState.agentExecutions) {
+      const consumeEvent = (block: string) => {
+        const lines = block.split(/\\r?\\n/);
+        let eventName = 'message';
+        let data = '';
+        for (const line of lines) {
+          if (line.startsWith('event:')) eventName = line.slice(6).trim();
+          if (line.startsWith('data:')) data += line.slice(5).trim();
+        }
+        if (!data) return;
+
+        let parsed: any;
+        try { parsed = JSON.parse(data); } catch { return; }
+
+        if (eventName === 'init') {
+          workflowState = parsed.state;
+          return;
+        }
+
+        if (eventName === 'agent_step') {
+          const record = parsed.record;
+          if (!record) return;
+
+          workflowState = {
+            ...(workflowState || {}),
+            currentAgent: parsed.currentAgent,
+            agentExecutions: [
+              ...((workflowState as WorkflowState | null)?.agentExecutions || []).filter(
+                (item: any) => item.agentId !== record.agentId || item.status !== 'running'
+              ),
+              record
+            ]
+          } as WorkflowState;
+
           const exec: AgentExecution = {
             id: `exec-${record.agentId}-${Date.now()}`,
             agentId: record.agentId,
@@ -61,18 +94,53 @@ class AgentOrchestrator {
             outputSummary: record.shortSummary,
             reasoningNotes: [
               record.shortSummary,
-              `Sources evaluated: ${record.sourcesUsed.length}`,
-              `Verification audit: ${workflowState.verificationResult?.verificationStatus || 'VERIFIED'}`
+              `Sources evaluated: ${record.sourcesUsed?.length || 0}`,
+              `Verification audit: ${workflowState?.verificationResult?.verificationStatus || 'IN PROGRESS'}`
             ],
             outputPayload: record.outputData || {},
-            confidenceScore: workflowState.confidence || 0.98,
+            confidenceScore: workflowState?.confidence || 0.98,
             tokensUsed: { prompt: 180, completion: 220, total: 400 }
           };
 
-          accumulatedExecutions.push(exec);
-          onProgress?.(record.agentId, record.status, exec, accumulatedExecutions);
+          const existingIndex = accumulatedExecutions.findIndex(
+            (item) => item.agentId === exec.agentId
+          );
+          if (existingIndex >= 0) accumulatedExecutions[existingIndex] = exec;
+          else accumulatedExecutions.push(exec);
+
+          const uiStatus =
+            record.status === 'running' ? 'running' :
+            record.status === 'completed' ? 'completed' :
+            record.status === 'failed' ? 'failed' : 'needs_verification';
+
+          onProgress?.(record.agentId, uiStatus, exec, [...accumulatedExecutions]);
+          return;
         }
+
+        if (eventName === 'complete') {
+          workflowState = parsed.state;
+          return;
+        }
+
+        if (eventName === 'error') {
+          streamError = parsed.error || 'Multi-agent pipeline failed.';
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+          const blocks = buffer.split(/\\r?\\n\\r?\\n/);
+          buffer = blocks.pop() || '';
+          blocks.forEach(consumeEvent);
+        }
+        if (done) break;
       }
+      if (buffer.trim()) consumeEvent(buffer);
+
+      if (streamError) throw new Error(streamError);
+      if (!workflowState) throw new Error('Workflow stream ended without a final state.');
 
       // Transform workflowState to FinalActionPlan
       const finalPlan = this.transformStateToActionPlan(request.id, workflowState);

@@ -23,6 +23,8 @@ import { HumanApprovalModal } from '../components/HumanApprovalModal';
 import { PrintableActionPacket } from '../components/PrintableActionPacket';
 import { LegalDisclaimer } from '../components/LegalDisclaimer';
 import { agentOrchestrator } from '../services/agentOrchestrator';
+import { LiveExecutionPanel } from '../components/LiveExecutionPanel';
+import { CIVICFLOW_STAGES, ExecutionStage, playExecutionTone } from '../services/liveExecutionService';
 
 interface DemoScenario {
   id: string;
@@ -80,6 +82,31 @@ export const JudgeDemoPage: React.FC<{ onNavigate: (path: string) => void }> = (
   const [humanApprovalState, setHumanApprovalState] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [actionPlanRequest, setActionPlanRequest] = useState<UserRequest | null>(null);
 
+  const liveStages = useMemo<ExecutionStage[]>(() => {
+    const mapping: Record<string, string> = {
+      intake_agent: 'intake',
+      router_agent: 'routing',
+      research_agent: 'evidence',
+      rag_agent: 'evidence',
+      eligibility_agent: 'requirements',
+      document_agent: 'documents',
+      workflow_agent: 'workflow',
+      verifier_agent: 'verification',
+      response_agent: 'approval',
+    };
+    const latest = new Map<string, AgentExecution>();
+    executions.forEach((execution) => latest.set(execution.agentId, execution));
+    const currentId = currentRunningAgent ? mapping[currentRunningAgent] : undefined;
+    return CIVICFLOW_STAGES.map((stage) => {
+      const matched = [...latest.values()].filter((execution) => mapping[execution.agentId] === stage.id).pop();
+      if (currentId === stage.id) return { ...stage, status: 'running' as const };
+      if (matched?.status === 'success') return { ...stage, status: 'completed' as const, durationMs: matched.durationMs };
+      if (matched?.status === 'warning') return { ...stage, status: 'needs_review' as const, durationMs: matched.durationMs };
+      if (matched?.status === 'error') return { ...stage, status: 'failed' as const, durationMs: matched.durationMs };
+      return stage;
+    });
+  }, [executions, currentRunningAgent]);
+
   const handleStartWorkflow = async (scenario = selectedScenario) => {
     setIsExecuting(true);
     setStatusMessage('Using configured knowledge sources...');
@@ -116,6 +143,8 @@ export const JudgeDemoPage: React.FC<{ onNavigate: (path: string) => void }> = (
     try {
       const completed = await agentOrchestrator.runWorkflow(tempReq, 'en', (agentId, status, exec, all) => {
         setCurrentRunningAgent(status === 'running' ? agentId : undefined);
+        if (status === 'success') playExecutionTone('success');
+        if (status === 'warning') playExecutionTone('warning');
         setStatusMessage(`Worker active: ${agentId.replace('_', ' ')}...`);
         if (all) setExecutions([...all]);
       });
@@ -247,6 +276,8 @@ export const JudgeDemoPage: React.FC<{ onNavigate: (path: string) => void }> = (
           <span>{statusMessage}</span>
         </div>
       )}
+
+      <LiveExecutionPanel active={isExecuting} stages={liveStages} title="Live Multi-Agent Execution" />
 
       {/* 2. DYNAMIC AGENT WORKFLOW PANEL (Collapsible, Secondary) */}
       {executions.length > 0 && (

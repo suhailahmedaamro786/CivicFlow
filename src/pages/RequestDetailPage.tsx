@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Play, 
@@ -45,8 +45,10 @@ export const RequestDetailPage: React.FC<RequestDetailPageProps> = ({
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [isPrintPacketOpen, setIsPrintPacketOpen] = useState(false);
   const [isRerunning, setIsRerunning] = useState(false);
+  const workflowStartedRef = useRef(false);
 
-  // Poll or listen for updates if the workflow is currently executing
+  // The detail page owns the live workflow. This makes processing resilient
+  // to navigation/unmounts from the request form and keeps progress visible.
   useEffect(() => {
     const checkInterval = setInterval(() => {
       const updated = storageService.getRequestById(requestId);
@@ -57,6 +59,35 @@ export const RequestDetailPage: React.FC<RequestDetailPageProps> = ({
 
     return () => clearInterval(checkInterval);
   }, [requestId]);
+
+  useEffect(() => {
+    if (workflowStartedRef.current) return;
+    if (!request || request.status !== 'processing' || request.executions.length > 0) return;
+
+    workflowStartedRef.current = true;
+    setIsRerunning(true);
+
+    void agentOrchestrator.runWorkflow(request, selectedLanguage, (agentId, status, _execution, allExecutions) => {
+      setRequest(current => current ? {
+        ...current,
+        currentAgent: status === 'running' ? agentId : current.currentAgent,
+        executions: allExecutions || current.executions,
+        updatedAt: new Date().toISOString()
+      } : current);
+    }).then(updated => {
+      setRequest(updated);
+    }).catch(error => {
+      console.error('CivicFlow live workflow failed:', error);
+      const current = storageService.getRequestById(requestId);
+      if (current) {
+        const failed = { ...current, status: 'failed' as const, updatedAt: new Date().toISOString() };
+        storageService.saveRequest(failed);
+        setRequest(failed);
+      }
+    }).finally(() => {
+      setIsRerunning(false);
+    });
+  }, [requestId, request, selectedLanguage]);
 
   if (!request) {
     return (
@@ -303,7 +334,7 @@ export const RequestDetailPage: React.FC<RequestDetailPageProps> = ({
           <Clock className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
           <h3 className="text-sm font-bold text-slate-800">Synthesizing Verified Action Plan...</h3>
           <p className="text-xs text-slate-400">
-            Agents are currently evaluating statutory prerequisites and cross-referencing fee schedules.
+            The live workers are retrieving available evidence, checking requirements, and preparing a verified result.
           </p>
         </div>
       )}

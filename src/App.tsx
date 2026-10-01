@@ -33,10 +33,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleLaunchDemo = () => {
-    navigateTo('/dashboard/new-request');
-  };
-
   // Route matching
   const renderCurrentView = () => {
     // Check if on Landing
@@ -44,7 +40,6 @@ export default function App() {
       return (
         <LandingPage
           onNavigate={navigateTo}
-          onLaunchDemo={handleLaunchDemo}
         />
       );
     }
@@ -84,7 +79,6 @@ export default function App() {
     return (
       <DashboardCommandCenter
         onNavigate={navigateTo}
-        onLaunchDemo={handleLaunchDemo}
       />
     );
   };
@@ -98,7 +92,6 @@ export default function App() {
       <Navbar
         currentPath={currentPath}
         onNavigate={navigateTo}
-        onLaunchDemo={handleLaunchDemo}
       />
 
       {/* Main Container */}

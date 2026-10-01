@@ -43,8 +43,9 @@ export class AgentOrchestrator {
       agentExecutions: [],
       errors: [],
       confidence: 1.0,
-      humanApprovalRequired: false
-    };
+      humanApprovalRequired: false,
+      locationHint
+    } as WorkflowState & { locationHint?: IntakeInput['locationHint'] };
   }
 
   /**
@@ -146,7 +147,8 @@ export class AgentOrchestrator {
       // 1. INTAKE AGENT
       const intakeInput: IntakeInput = {
         rawQuery: state.originalRequest,
-        languageHint: state.targetLanguage
+        languageHint: state.targetLanguage,
+        locationHint: (initialState as WorkflowState & { locationHint?: IntakeInput['locationHint'] }).locationHint
       };
       state.normalizedRequest = await runAgentStep('intake_agent', intakeAgent.name, async () => {
         const out = await intakeAgent.execute(intakeInput, agentCtx);

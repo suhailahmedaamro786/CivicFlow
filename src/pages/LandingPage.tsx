@@ -4,7 +4,7 @@ import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 const DRAFT_KEY = 'civicflow_request_draft';
 
-export const LandingPage: React.FC<{ onNavigate: (path: string) => void; onLaunchDemo?: () => void }> = ({ onNavigate }) => {
+export const LandingPage: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
   const [problemInput, setProblemInput] = useState('');
 
   const startRequest = () => {

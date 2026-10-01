@@ -40,8 +40,9 @@ export class RAGPipelineService {
       });
     }
 
-    // Seed initial demo knowledge base
-    this.readyPromise = this.seedDemoKnowledgeBase();
+    // Real-data mode: never seed fabricated/demo civic records at startup.
+    // The knowledge base is populated only through explicit document ingestion.
+    this.readyPromise = this.initializeVectorStore();
   }
 
   public async getStatus(): Promise<RAGSystemStatus> {
@@ -62,7 +63,7 @@ export class RAGPipelineService {
       embeddingModel: embeddingService.getProviderName(),
       totalDocuments: this.inMemoryStore.getDocumentCount(),
       totalChunks: this.inMemoryStore.getChunkCount(),
-      demoDocumentsCount: this.inMemoryStore.getDocuments().filter(d => d.isDemoDocument).length,
+      demoDocumentsCount: 0,
       cacheHitCount: embeddingService.getCacheHitCount()
     };
   }
@@ -178,6 +179,18 @@ export class RAGPipelineService {
   /**
    * Semantic Retrieval & Reranking Pipeline
    */
+  private async initializeVectorStore(): Promise<void> {
+    if (!this.qdrantStore.isConfigured()) return;
+    try {
+      const ready = await this.qdrantStore.ensureCollection();
+      if (ready && this.qdrantStore.isConnected()) {
+        this.activeStore = this.qdrantStore;
+      }
+    } catch (err) {
+      console.warn('[RAGPipelineService] Vector store initialization failed; no fabricated fallback data will be used.');
+    }
+  }
+
   public async search(
     query: string,
     options: {
@@ -185,6 +198,7 @@ export class RAGPipelineService {
       filter?: RetrievalFilter;
     } = {}
   ): Promise<RAGSearchResult> {
+    await this.readyPromise;
     const startTime = Date.now();
     const cleanQuery = query.trim();
     const topK = options.topK ?? 4;
@@ -340,107 +354,6 @@ Formulate a concise, verified factual answer with source citations.`;
     return true;
   }
 
-  /**
-   * Seeds realistic demo regulatory documents clearly labelled: "Demo Knowledge Base"
-   */
-  private async seedDemoKnowledgeBase(): Promise<void> {
-    const demoDocs = [
-      {
-        filename: 'uniform_business_organizations_code_llc1.md',
-        title: 'Uniform Business Organizations Code — LLC Formation & Articles of Organization',
-        codeReference: 'State Corp. Code § 17702.01',
-        authority: 'Secretary of State (Division of Corporations)',
-        category: 'Business Registration',
-        source: 'State Corp. Code § 17702.01 — California Legislative Gazette Title 2.6',
-        publicationDate: '2026-01-15',
-        content: `# Uniform Business Organizations Code — LLC Formation & Articles of Organization
-
-## Section § 17702.01: Articles of Organization Filing Rules
-State Corporation Code Section 17702.01 mandates that in order to organize a Limited Liability Company (LLC), one or more persons must deliver signed Articles of Organization (Form LLC-1) to the Secretary of State for filing.
-
-Mandatory Filing Information:
-1. Exact registered entity name, which must include 'Limited Liability Company', 'LLC', or 'L.L.C.'.
-2. Registered Agent for Service of Process with a physical street address within the state. P.O. boxes are legally disallowed.
-3. Management structure disclosure: whether managed by one manager, more than one manager, or all LLC member(s).
-
-## Section § 17702.04: Statutory Fee Schedules and Timelines
-1. Initial filing statutory fee: Exactly $70.00 standard administrative filing fee payable to the Secretary of State.
-2. Statement of Information (Form LLC-12): Required within 90 calendar days of formation ($20 statutory fee).
-3. Annual Franchise Tax: Subject to annual minimum franchise tax fee ($800) due by the 15th day of the 4th month of the taxable year.`
-      },
-      {
-        filename: 'federal_ein_issuance_protocol.md',
-        title: 'Federal Employer Identification Number (FEIN / EIN) Protocol',
-        codeReference: 'Internal Revenue Code 26 U.S.C. § 6109',
-        authority: 'Internal Revenue Service (IRS)',
-        category: 'Business Registration',
-        source: 'Treasury Regulations Title 26 (26 U.S.C. § 6109)',
-        publicationDate: '2025-10-01',
-        content: `# Federal Employer Identification Number (FEIN / EIN) Issuance Protocol
-
-## Section 26 U.S.C. § 6109: Mandatory Federal Tax Identifier
-Under 26 U.S.C. § 6109 and Treasury Regulations § 301.6109-1, any employer, partnership, or limited liability company must obtain an Employer Identification Number (EIN) for federal tax administration, commercial banking, and employee payroll.
-
-## Electronic Procurement Rules & Zero-Cost Mandate
-1. Cost: $0.00 (100% Free official government service). Beware of commercial third-party scam brokers charging fees for EIN issuance.
-2. Online Portal Availability: Issued immediately upon electronic completion for entities whose principal officer possesses a valid SSN or ITIN.
-3. Commercial Bank Account Prerequisite: Commercial financial institutions universally require an official IRS EIN Confirmation Letter (CP 575) alongside filed Articles of Organization to open a commercial business checking account.`
-      },
-      {
-        filename: 'county_fbn_statements_and_publication.md',
-        title: 'Fictitious Business Name (DBA) Statements & Mandatory Newspaper Publication',
-        codeReference: 'Bus. & Prof. Code § 17900 - 17930',
-        authority: 'County Clerk-Recorder Department',
-        category: 'Business Registration',
-        source: 'Bus. & Prof. Code § 17900 — County Administrative Code',
-        publicationDate: '2025-11-20',
-        content: `# Fictitious Business Name (DBA) Statements & Publication Mandate
-
-## Section § 17910: County Filing Procedure
-Business and Professions Code Section 17900 dictates that any person or entity transacting business under a trade name that does not include the legal surname or exact registered corporate entity name must file a Fictitious Business Name (FBN) Statement with the County Clerk.
-1. Delivery: File Form FBN-100 within 40 calendar days of starting business.
-2. County Base Fee: $26.00 base administrative fee for the first business name and owner.
-
-## Section § 17917: Four-Week Mandatory Newspaper Publication
-1. Within 30 days of filing the FBN statement, the registrant must publish the statement in an adjudicated newspaper of general circulation once per week for four (4) consecutive weeks.
-2. Proof of Publication: The newspaper publisher provides an Affidavit of Publication, which must be filed with the County Clerk within 30 days of the final publication date.`
-      },
-      {
-        filename: 'municipal_business_tax_registration_ordinance.md',
-        title: 'Municipal Business Tax Registration Certificate (BTRC) Ordinance',
-        codeReference: 'Mun. Code Title 5, Chapter 5.04.010',
-        authority: 'City Office of Finance & Revenue',
-        category: 'Business Registration',
-        source: 'Mun. Code Title 5 Chapter 5.04.010',
-        publicationDate: '2026-02-01',
-        content: `# Municipal Business Tax Registration Certificate (BTRC) Ordinance
-
-## Section 5.04.010: Local Licensing Mandate
-Municipal Code Chapter 5.04.010 states: No person shall engage in, conduct, manage, or carry on any trade, profession, or business within city limits without first having obtained a valid Business Tax Registration Certificate (BTRC).
-
-## Compliance Timelines & Home Occupation Rules
-1. Application Deadline: Registration must occur within 30 days of commencing commercial operations or opening physical premises.
-2. Base Registration Fee: $50.00 base administrative fee plus local gross receipts tax rate.
-3. Home-Based Businesses: Must file a Home Occupation Permit affidavit certifying quiet residential enjoyment, zero commercial exterior signage, and zero hazardous material storage.`
-      }
-    ];
-
-    for (const d of demoDocs) {
-      const buffer = Buffer.from(d.content, 'utf-8');
-      try {
-        const res = await this.ingestDocument(buffer, d.filename, {
-          title: d.title,
-          category: d.category,
-          authority: d.authority,
-          source: d.source,
-          publicationDate: d.publicationDate
-        });
-        res.document.isDemoDocument = true;
-      } catch (err) {
-        console.warn('[RAGPipelineService] Demo doc seed warning:', err);
-      }
-    }
-  }
 }
 
 export const ragPipeline = new RAGPipelineService();

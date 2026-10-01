@@ -10,8 +10,6 @@ import { RequestDetailPage } from './pages/RequestDetailPage';
 import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { AgentMonitoringPage } from './pages/AgentMonitoringPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
-import { JudgeDemoPage } from './pages/JudgeDemoPage';
-import { INITIAL_DEMO_REQUEST } from './services/storageService';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -36,7 +34,7 @@ export default function App() {
   };
 
   const handleLaunchDemo = () => {
-    navigateTo('/demo');
+    navigateTo('/dashboard/new-request');
   };
 
   // Route matching
@@ -49,11 +47,6 @@ export default function App() {
           onLaunchDemo={handleLaunchDemo}
         />
       );
-    }
-
-    // Dedicated Judge Demo route
-    if (currentPath === '/demo') {
-      return <JudgeDemoPage onNavigate={navigateTo} />;
     }
 
     // Detail view: /dashboard/requests/[id]
@@ -96,7 +89,7 @@ export default function App() {
     );
   };
 
-  const isLanding = currentPath === '/' || currentPath === '' || currentPath === '/demo';
+  const isLanding = currentPath === '/' || currentPath === '';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900">

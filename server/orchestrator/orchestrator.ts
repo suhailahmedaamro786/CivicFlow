@@ -83,7 +83,7 @@ export class AgentOrchestrator {
 
       try {
         // Never allow one external/model call to block the entire 9-agent workflow indefinitely.
-        const timeoutMs = 45000;
+        const timeoutMs = 15000;
         const timeout = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Agent ${agentName} timed out after ${timeoutMs / 1000}s.`)), timeoutMs)
         );

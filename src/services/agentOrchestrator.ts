@@ -30,15 +30,29 @@ class AgentOrchestrator {
 
     try {
       // Use the real SSE pipeline so the UI receives each agent event as it happens.
-      const response = await fetch('/api/orchestrate/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({
-          query: request.rawQuery,
-          language: targetLanguage,
-          location: request.jurisdiction
-        })
-      });
+      const controller = new AbortController();
+      const clientTimeout = window.setTimeout(() => controller.abort(), 120000);
+
+      let response: Response;
+      try {
+        response = await fetch('/api/orchestrate/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify({
+            query: request.rawQuery,
+            language: targetLanguage,
+            location: request.jurisdiction
+          }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new Error('The live workflow timed out after 2 minutes. Check Gemini API availability and try again.');
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(clientTimeout);
+      }
 
       if (!response.ok || !response.body) {
         throw new Error(`Workflow stream unavailable (HTTP ${response.status}).`);
